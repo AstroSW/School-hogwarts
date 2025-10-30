@@ -1,6 +1,5 @@
 package ru.hogwarts.school.controller;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import ru.hogwarts.school.model.Student;
@@ -36,7 +35,7 @@ public class StudentController {
     public ResponseEntity<Student> editStudent(@RequestBody Student student) {
         Student editStudent = studentService.editStudent(student);
         if (editStudent == null) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+            return ResponseEntity.notFound().build();
         }
         return ResponseEntity.ok(editStudent);
     }
@@ -51,7 +50,7 @@ public class StudentController {
         return studentService.findAllStudent();
     }
 
-    @GetMapping("/age")
+    @GetMapping("/")
     public ResponseEntity<Collection<Student>> findStudentWithAge(@RequestParam int age) {
         if (age <= 0) {
             return ResponseEntity.ok(Collections.emptyList());
