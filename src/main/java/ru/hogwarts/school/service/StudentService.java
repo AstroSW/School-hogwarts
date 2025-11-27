@@ -45,4 +45,16 @@ public class StudentService {
     public List<Student> findStudentsByFaculty(Faculty faculty) {
         return studentRepository.findByFaculty(faculty);
     }
+
+    public int countAllStudents() {
+        return studentRepository.countAllStudents();
+    }
+
+    public double countAvgAllStudents() {
+        return studentRepository.countAvgAllStudents();
+    }
+
+    public List<Student> getLastStudent() {
+        return studentRepository.getLastStudent();
+    }
 }
