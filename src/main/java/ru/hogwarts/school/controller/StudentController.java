@@ -83,4 +83,14 @@ public class StudentController {
     public Collection<Student> getLastStudent() {
         return studentService.getLastStudent();
     }
+
+    @GetMapping("/A")
+    public Collection<String> getStudentNameWith_A() {
+        return studentService.getStudentNameWith_A();
+    }
+
+    @GetMapping("/average")
+    public double getAvg() {
+        return studentService.getAgeAvg();
+    }
 }

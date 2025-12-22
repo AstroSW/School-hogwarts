@@ -51,4 +51,12 @@ public class FacultyService {
         logger.info("Was invoked method for find by faculty or color");
         return facultyRepository.findByNameIgnoreCaseOrColorIgnoreCase(search, search);
     }
+
+    public String facultyNameLong() {
+        List<Faculty> faculties = facultyRepository.findAll();
+        return faculties.stream()
+                .map(Faculty::getName)
+                .max((n1, n2) -> Integer.compare(n1.length(), n2.length()))
+                .orElse("");
+    }
 }
