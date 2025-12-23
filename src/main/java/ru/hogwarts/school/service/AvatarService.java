@@ -1,5 +1,7 @@
 package ru.hogwarts.school.service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -33,38 +35,53 @@ public class AvatarService {
         this.studentRepository = studentRepository;
     }
 
+    Logger logger = LoggerFactory.getLogger(AvatarService.class);
+
     @Transactional(readOnly = true)
     public Avatar findAvatar(Long studentId) {
+        logger.info("Was invoked method for find avatar");
         return avatarRepository.findByStudentId(studentId).orElse(new Avatar());
     }
 
     @Transactional
     public void upLoadAvatar(Long studentId, MultipartFile avatarFile) throws IOException {
-        Student student = studentRepository.getById(studentId);
-        Path filePath = Path.of(avatarsDir, student + "." + getExtentions(avatarFile.getOriginalFilename()));
-        Files.createDirectories(filePath.getParent());
-        Files.deleteIfExists(filePath);
-        try (InputStream is = avatarFile.getInputStream();
-             OutputStream os = Files.newOutputStream(filePath, CREATE_NEW);
-             BufferedInputStream bis = new BufferedInputStream(is, 1024);
-             BufferedOutputStream bos = new BufferedOutputStream(os, 1024)) {
-            bis.transferTo(bos);
+        logger.info("Was invoked method for upload avatar");
+        try {
+            Student student = studentRepository.getById(studentId);
+            Path filePath = Path.of(avatarsDir, student + "." + getExtentions(avatarFile.getOriginalFilename()));
+            Files.createDirectories(filePath.getParent());
+            Files.deleteIfExists(filePath);
+            try (InputStream is = avatarFile.getInputStream();
+                 OutputStream os = Files.newOutputStream(filePath, CREATE_NEW);
+                 BufferedInputStream bis = new BufferedInputStream(is, 1024);
+                 BufferedOutputStream bos = new BufferedOutputStream(os, 1024)) {
+                bis.transferTo(bos);
+            }
+            Avatar avatar = findAvatar(studentId);
+            avatar.setStudent(student);
+            avatar.setFilePath(filePath.toString());
+            avatar.setFileSize(avatarFile.getSize());
+            avatar.setMediaType(avatarFile.getContentType());
+            avatar.setData(generateDataForDB(filePath));
+            avatarRepository.save(avatar);
+        } catch (Exception e) {
+            logger.error("Error occurred while uploading avatar for studentId: {}. Error: {}", studentId, e.getMessage(), e);
+            throw e;
         }
-        Avatar avatar = findAvatar(studentId);
-        avatar.setStudent(student);
-        avatar.setFilePath(filePath.toString());
-        avatar.setFileSize(avatarFile.getSize());
-        avatar.setMediaType(avatarFile.getContentType());
-        avatar.setData(generateDataForDB(filePath));
-        avatarRepository.save(avatar);
     }
 
     private byte[] generateDataForDB(Path filePath) throws IOException {
+        logger.debug("Generating thumbnail data for avatar");
         try (
                 InputStream is = Files.newInputStream(filePath);
                 BufferedInputStream bis = new BufferedInputStream(is, 1024);
                 ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
             BufferedImage image = ImageIO.read(bis);
+
+            if (image == null) {
+                logger.error("Failed to read image file: {}.", filePath);
+                throw new IOException("Invalid image file format");
+            }
 
             int height = image.getHeight() / (image.getWidth() / 100);
             BufferedImage preview = new BufferedImage(100, height, image.getType());
@@ -74,14 +91,19 @@ public class AvatarService {
 
             ImageIO.write(preview, getExtentions(filePath.getFileName().toString()), baos);
             return baos.toByteArray();
+        } catch (IOException e) {
+            logger.error("Error generating thumbnail for file: {}. Error: {}", filePath, e.getMessage(), e);
+            throw e;
         }
     }
 
     private String getExtentions(String fileName) {
+        logger.debug("Extracting file extension from filename: {}", fileName);
         return fileName.substring(fileName.lastIndexOf(".") + 1);
     }
 
     public List<Avatar> findAllAvatars(Integer pageNumber, Integer pageSize) {
+        logger.info("Was invoked method for find all avatars");
         PageRequest pageRequest = PageRequest.of(pageNumber - 1, pageSize);
         return avatarRepository.findAll(pageRequest).getContent();
     }
